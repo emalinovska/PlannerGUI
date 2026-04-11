@@ -59,6 +59,9 @@ cmake-build-*/
 *.dll
 *.exe
 
+.qtcreator/
+.qtc_clangd/
+
 # OS
 .DS_Store
 Thumbs.db
