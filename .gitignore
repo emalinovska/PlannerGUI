@@ -39,3 +39,26 @@
 
 # debug information files
 *.dwo
+
+# Qt / build
+build/
+*/build/
+build-*/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+
+# Qt Creator
+*.user
+*.autosave
+*.pro.user*
+
+# Qt deployment
+*.dll
+*.exe
+
+# OS
+.DS_Store
+Thumbs.db
