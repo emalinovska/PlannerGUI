@@ -1,0 +1,74 @@
+/* ====== GLOBAL ====== */
+QWidget {
+    background: #FFFFFF;
+    color: #333333;
+    font-family: "Ink Free";
+    font-size: 14px;
+}
+QLabel#title {
+    font-size: 30px;
+    font-weight: bold;
+    color: #1A1A1A;
+}
+/* ====== BUTTONS ====== */
+QPushButton {
+    background-color: #EAEAEA;
+    color: #333333;
+    border-radius: 6px;
+    padding: 6px 14px;
+    border: 1px solid #CFCFCF;
+}
+QPushButton:hover {
+    background-color: #DDDDDD;
+}
+
+/* ====== INPUTS ====== */
+QLineEdit, QSpinBox, QTextEdit, QComboBox, QDateEdit {
+    background: #FFFFFF;
+    border: 1px solid #CFCFCF;
+    border-radius: 6px;
+    padding: 6px;
+}
+QLineEdit:focus, QSpinBox:focus, QTextEdit:focus, QComboBox:focus, QDateEdit:focus {
+    border: 1px solid #6C63FF;
+}
+QDateEdit::up-button, QDateEdit::down-button,
+QSpinBox::up-button, QSpinBox::down-button {
+    width: 16px;
+    height: 16px;
+}
+QLabel#errorLabel {
+    color: #D63031;
+    background-color: rgba(214, 48, 49, 0.1);
+    border: 1px solid #D63031;
+    border-radius: 6px;
+    padding: 6px;
+    font-weight: bold;
+}
+/* ====== TABLE ====== */
+QTableWidget {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+}
+QHeaderView::section {
+    background: #F7F7F7;
+    padding: 6px;
+    border: none;
+    font-weight: bold;
+}
+QTableWidget::item:selected {
+    background: #DAD7FF;
+}
+QTableWidget::item {
+    padding: 4px;
+}
+/* ====== SCROLLBAR ====== */
+QScrollBar:vertical {
+    background: #FFFFFF;
+    width: 10px;
+}
+QScrollBar::handle:vertical {
+    background: #CFCFCF;
+    border-radius: 5px;
+}
