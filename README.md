@@ -8,7 +8,7 @@ A desktop task management application built with **C++** and **Qt**.
 * Mark tasks as completed
 * Filter tasks by date and priority
 * Sort tasks in the table
-* Display summary (total tasks, completed tasks, average priority)
+* Display summary (total tasks, completed tasks, average priority, average time)
 * User login and registration
 * Multiple UI themes
 
