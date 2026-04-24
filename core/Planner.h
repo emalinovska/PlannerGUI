@@ -15,10 +15,12 @@ public:
 
     const QVector<Task>& getTasks() const;
 
-    bool loadFromFile(const QString &path);
-    bool saveToFile(const QString &path) const;
+    void saveToBinaryFile(const QString& path);
+    void loadFromBinaryFile(const QString& path);
     int countCompleted() const;
     double averagePriority() const;
+    void startTaskTimer(int index);
+    void stopTaskTimer(int index);
 
     template <typename T>
     int countIf(const QVector<T>& list, std::function<bool(const T&)> predicate) const {

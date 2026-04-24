@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>681</width>
-    <height>683</height>
+    <width>868</width>
+    <height>805</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -136,6 +136,9 @@
       <attribute name="horizontalHeaderStretchLastSection">
        <bool>true</bool>
       </attribute>
+      <attribute name="verticalHeaderMinimumSectionSize">
+       <number>18</number>
+      </attribute>
       <column/>
       <column/>
       <column/>
@@ -208,7 +211,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>681</width>
+     <width>868</width>
      <height>25</height>
     </rect>
    </property>

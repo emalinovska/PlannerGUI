@@ -14,6 +14,13 @@
 #include <QApplication>
 
 
+QString formatTime(qint64 seconds)
+{
+    int h = seconds / 3600;
+    int m = (seconds % 3600) / 60;
+    return QString("%1h %2m").arg(h).arg(m);
+}
+
 QString getThemeName()
 {
     QSettings settings("PlannerGUI", "PlannerGUI");
@@ -38,7 +45,13 @@ MainWindow::MainWindow(const QString &username, QWidget *parent)
     , currentUser(username)
 {
     ui->setupUi(this);
-
+    ui->taskTable->setColumnWidth(0, 100);   // цветная полоска
+    ui->taskTable->setColumnWidth(1, 60);   // Done
+    ui->taskTable->setColumnWidth(2, 200);  // Title
+    ui->taskTable->setColumnWidth(3, 120);  // Due Date
+    ui->taskTable->setColumnWidth(4, 80);   // Priority
+    ui->taskTable->setColumnWidth(5, 120);  // Time
+    ui->taskTable->setColumnWidth(6, 260);  // Control (кнопки)
     QSettings settings("PlannerGUI", "PlannerGUI");
     QString savedTheme = settings.value("theme", ":/themes/light.qss").toString();
     applyTheme(savedTheme);
@@ -58,22 +71,40 @@ MainWindow::MainWindow(const QString &username, QWidget *parent)
         applyTheme(":/new/prefix1/themes/pastel.qss");
     });
 
-    ui->taskTable->setColumnCount(5);
-    ui->taskTable->setHorizontalHeaderLabels({"", "Done", "Title", "Due Date", "Priority"});
-    ui->taskTable->setColumnWidth(0, 8);
-    ui->taskTable->horizontalHeader()->setStretchLastSection(true);
+    ui->taskTable->setColumnCount(7);
+    ui->taskTable->setHorizontalHeaderLabels({
+        "", "Done", "Title", "Due Date", "Priority", "Time", "Control" });
+    ui->taskTable->horizontalHeader()->setStretchLastSection(false);
+    ui->taskTable->verticalHeader()->setVisible(false);
+    ui->taskTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    ui->taskTable->verticalHeader()->setDefaultSectionSize(45);
+    ui->taskTable->setColumnWidth(0, 70);   // цветная полоска
+    ui->taskTable->setColumnWidth(1, 60);   // Done
+    ui->taskTable->setColumnWidth(2, 200);  // Title
+    ui->taskTable->setColumnWidth(3, 120);  // Due Date
+    ui->taskTable->setColumnWidth(4, 80);   // Priority
+    ui->taskTable->setColumnWidth(5, 100);  // Time
+    ui->taskTable->setColumnWidth(6, 200);  // Control (кнопки)
     ui->taskTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->taskTable->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->taskTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->taskTable->setSortingEnabled(true);
     updateLegend();
     updateSummary(planner.getTasks());
+    liveTimer = new QTimer(this);
+
+    connect(liveTimer, &QTimer::timeout, this, [this]() {
+        updateTable();
+    });
+
+    liveTimer->start(1000);
 
 
+    QString basePath = QCoreApplication::applicationDirPath()
+                       + "/data/users/" + currentUser + "/";
 
-    QDir().mkpath("data/users/" + currentUser);
-
-    planner.loadFromFile("data/users/" + currentUser + "/tasks.txt");
+    QDir().mkpath(basePath);
+    planner.loadFromBinaryFile(basePath + "tasks.dat");
 
     updateTable();
 }
@@ -102,6 +133,7 @@ void MainWindow::updateTable()
     int visibleTotal = 0;
     int visibleCompleted = 0;
     int prioritySum = 0; // 🔥 добавили
+    qint64 timeSum = 0;
 
     for (int i = 0; i < tasks.size(); ++i) {
 
@@ -134,7 +166,8 @@ void MainWindow::updateTable()
         if (t.isCompleted())
             visibleCompleted++;
 
-        prioritySum += t.getPriority(); // 🔥 добавили
+        prioritySum += t.getPriority();
+        timeSum += t.getCurrentTimeSpent();
 
         int row = ui->taskTable->rowCount();
         ui->taskTable->insertRow(row);
@@ -161,13 +194,13 @@ void MainWindow::updateTable()
         QColor dateOverdue, dateToday, dateNormal;
 
         if (theme == "dark") {
-            priorityLow    = QColor("#6C8CFF");
-            priorityMedium = QColor("#FFD166");
-            priorityHigh   = QColor("#FF6B6B");
+            priorityLow    = QColor("#6B8AFD");
+            priorityMedium = QColor("#FFB84D");
+            priorityHigh   = QColor("#FF7A7A");
 
-            dateOverdue = QColor("#FF4D4D");
-            dateToday   = QColor("#FFC857");
-            dateNormal  = QColor("#AAAAAA");
+            dateOverdue = QColor("#D63031");
+            dateToday   = QColor("#F39C12");
+            dateNormal  = QColor("#555555");
         }
         else if (theme == "blue") {
             priorityLow    = QColor("#4A90E2");
@@ -188,13 +221,13 @@ void MainWindow::updateTable()
             dateNormal  = QColor("#BDB2FF");
         }
         else { // light
-            priorityLow    = QColor("#6B8AFD");
-            priorityMedium = QColor("#FFB84D");
-            priorityHigh   = QColor("#FF7A7A");
+            priorityLow    = QColor("#6C8CFF");
+            priorityMedium = QColor("#FFD166");
+            priorityHigh   = QColor("#FF6B6B");
 
-            dateOverdue = QColor("#D63031");
-            dateToday   = QColor("#F39C12");
-            dateNormal  = QColor("#555555");
+            dateOverdue = QColor("#FF4D4D");
+            dateToday   = QColor("#FFC857");
+            dateNormal  = QColor("#AAAAAA");
         }
 
         // ===== PRIORITY =====
@@ -252,13 +285,47 @@ void MainWindow::updateTable()
 
             barItem->setBackground(QColor("#CCCCCC"));
         }
+        QTableWidgetItem *timeItem =
+            new QTableWidgetItem(formatTime(t.getCurrentTimeSpent()));
+        if (t.isTimerRunning()) {
+            timeItem->setText(timeItem->text() + " ⏱");
+        }
 
+        QWidget *controlWidget = new QWidget();
+        QHBoxLayout *layout = new QHBoxLayout(controlWidget);
+        layout->setContentsMargins(0,0,0,0);
+
+        QPushButton *startBtn = new QPushButton("Start");
+        QPushButton *pauseBtn = new QPushButton("Pause");
+
+
+        // 🔥 сохраняем индекс задачи
+        startBtn->setProperty("row", i);
+        pauseBtn->setProperty("row", i);
+
+        // ===== CONNECT =====
+        connect(startBtn, &QPushButton::clicked, this, [this, startBtn]() {
+            int row = startBtn->property("row").toInt();
+            planner.startTaskTimer(row); // ⚠️ ниже исправим
+            updateTable();
+        });
+
+        connect(pauseBtn, &QPushButton::clicked, this, [this, pauseBtn]() {
+            int row = pauseBtn->property("row").toInt();
+            planner.stopTaskTimer(row); // ⚠️ ниже исправим
+            updateTable();
+        });
+
+        layout->addWidget(startBtn);
+        layout->addWidget(pauseBtn);
         // ===== ADD =====
         ui->taskTable->setItem(row, 0, barItem);
         ui->taskTable->setItem(row, 1, checkItem);
         ui->taskTable->setItem(row, 2, titleItem);
         ui->taskTable->setItem(row, 3, dateItem);
         ui->taskTable->setItem(row, 4, priorityItem);
+        ui->taskTable->setItem(row, 5, timeItem);
+        ui->taskTable->setCellWidget(row, 6, controlWidget);
     }
 
     ui->taskTable->setSortingEnabled(true);
@@ -274,10 +341,16 @@ void MainWindow::updateTable()
                              ? 0
                              : static_cast<double>(prioritySum) / visibleTotal;
 
+    qint64 avgTime = (visibleTotal == 0)
+                         ? 0
+                         : timeSum / visibleTotal;
+    QString avgTimeStr = formatTime(avgTime);
+
     ui->summaryLabel->setText(
         "Total: " + QString::number(visibleTotal) +
         " | Completed: " + QString::number(visibleCompleted) +
-        " | Avg priority: " + QString::number(avgPriority, 'f', 1)
+        " | Avg priority: " + QString::number(avgPriority, 'f', 1) +
+        "|⏱ Avg time: " + avgTimeStr
         );
 
     ui->taskTable->blockSignals(false);
@@ -320,21 +393,22 @@ void MainWindow::on_editButton_clicked()
 
 void MainWindow::on_logoutButton_clicked()
 {
-    // 💾 сохраняем задачи
-    planner.saveToFile("data/users/" + currentUser + "/tasks.txt");
+    QString basePath = QCoreApplication::applicationDirPath()
+    + "/data/users/" + currentUser + "/";
 
-    // 🔓 открываем логин
+    // 💾 СНАЧАЛА сохраняем
+    planner.saveToBinaryFile(basePath + "tasks.dat");
+
+    // ❗ ЗАКРЫВАЕМ текущее окно СРАЗУ
+    this->close();
+
+    // 🔓 потом логин
     LoginWindow login;
 
-    this->hide(); // скрываем текущее окно
-
     if (login.exec() == QDialog::Accepted) {
-        // если пользователь снова залогинился
         MainWindow *newWindow = new MainWindow(login.getUsername());
         newWindow->show();
     }
-
-    this->close(); // закрываем текущее окно
 }
 
 void MainWindow::on_taskTable_itemChanged(QTableWidgetItem *item)
@@ -349,7 +423,9 @@ void MainWindow::on_taskTable_itemChanged(QTableWidgetItem *item)
     bool done = (item->checkState() == Qt::Checked);
 
     planner.setCompleted(realIndex, done);
-    planner.saveToFile(currentUser);
+    QString basePath = QCoreApplication::applicationDirPath()
+                       + "/data/users/" + currentUser + "/";
+    planner.saveToBinaryFile(basePath + "tasks.dat");
 
     updateTable();
 
@@ -380,7 +456,6 @@ void MainWindow::on_priorityFilterBox_currentIndexChanged(int)
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    planner.saveToFile("data/users/" + currentUser + "/tasks.txt");
     event->accept();
 }
 void MainWindow::applyTheme(const QString &themePath)

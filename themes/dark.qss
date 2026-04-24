@@ -4,6 +4,7 @@ QWidget {
     color: #E0E0E0;
     font-family: "Ink Free";
     font-size: 14px;
+    font-weight: bold;
 }
 QLabel#title {
     font-size: 30px;

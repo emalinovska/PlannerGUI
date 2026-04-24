@@ -1,109 +1,151 @@
 #include "Planner.h"
 #include <QFile>
-#include <QTextStream>
+#include <QDataStream>
+#include <QDebug>
+#include <cstring>
 
+// ===== GET TASKS =====
+const QVector<Task>& Planner::getTasks() const
+{
+    return tasks;
+}
+
+// ===== ADD =====
 void Planner::addTask(const Task &task)
 {
     tasks.append(task);
 }
 
-void Planner::updateTask(int index, const Task &task)
-{
-    if (index >= 0 && index < tasks.size())
-        tasks[index] = task;
-}
-
+// ===== REMOVE =====
 void Planner::removeTask(int index)
 {
     if (index >= 0 && index < tasks.size())
         tasks.removeAt(index);
 }
 
-const QVector<Task>& Planner::getTasks() const
-{
-    return tasks;
-}
-
-void Planner::setCompleted(int index, bool value)
+// ===== UPDATE =====
+void Planner::updateTask(int index, const Task &task)
 {
     if (index >= 0 && index < tasks.size())
-        tasks[index].setCompleted(value);
+        tasks[index] = task;
 }
 
-bool Planner::loadFromFile(const QString &path)
+// ===== SET COMPLETED =====
+void Planner::setCompleted(int index, bool done){
+    if (index >= 0 && index < tasks.size())
+        tasks[index].setCompleted(done);
+}
+
+void Planner::startTaskTimer(int index) {
+    if (index >= 0 && index < tasks.size())
+        tasks[index].startTimer();
+}
+
+void Planner::stopTaskTimer(int index) {
+    if (index>= 0 && index < tasks.size())
+        tasks[index].stopTimer();
+}
+// ================= SAVE =================
+void Planner::saveToBinaryFile(const QString &path)
 {
-    tasks.clear();
-
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        return false;
 
-    QTextStream in(&file);
-
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        QStringList parts = line.split(";");
-
-        // title;date
-        if (parts.size() == 2) {
-            parts.append("1");  // default priority
-            parts.append("0");  // default completed
-        }
-
-        // title;date;priority
-        if (parts.size() == 3) {
-            parts.append("0");  // default completed
-        }
-
-        // если всё равно не 4 — пропускаем
-        if (parts.size() != 4)
-            continue;
-
-        QString title = parts[0];
-        QDate date = QDate::fromString(parts[1], "yyyy-MM-dd");
-        int priority = parts[2].toInt();
-        bool completed = (parts[3] == "1");
-
-        tasks.append(Task(title, date, priority, completed));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        qDebug() << "Cannot save file:" << path;
+        return;
     }
 
-    return true;
-}
+    QDataStream out(&file);
+    out.setVersion(QDataStream::Qt_6_0);
 
-bool Planner::saveToFile(const QString &path) const
-{
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-        return false;
+    // 🔥 HEADER
+    out.writeRawData("TSK1", 4);
 
-    QTextStream out(&file);
+    qint32 size = tasks.size();
+    out << size;
 
     for (const Task &t : tasks) {
-        out << t.getTitle() << ";"
-            << t.getDueDate().toString("yyyy-MM-dd") << ";"
-            << t.getPriority() << ";"
-            << (t.isCompleted() ? "1" : "0")
-            << "\n";
+        out << t.getTitle()
+        << t.getDueDate()
+        << t.getPriority()
+        << t.isCompleted()
+        << t.getTimeSpent()
+        << t.isTimerRunning()
+        << t.getStartTime();
     }
 
-    return true;
+    file.close();
+
+    qDebug() << "Saved tasks:" << size;
+    qDebug() << "Saving to:" << path;
+    qDebug() << "File size:" << QFile(path).size();
 }
 
-int Planner::countCompleted() const {
-    return countIf<Task>(tasks, [](const Task& t) {
-        return t.isCompleted();
-    });
-}
+// ================= LOAD =================
+void Planner::loadFromBinaryFile(const QString &path)
+{
+    QFile file(path);
 
-double Planner::averagePriority() const {
-    if (tasks.isEmpty())
-        return 0;
-
-    int sum = 0;
-
-    for (const Task& t : tasks) {
-        sum += t.getPriority();
+    if (!file.exists()) {
+        qDebug() << "File does not exist:" << path;
+        return;
     }
 
-    return static_cast<double>(sum) / tasks.size();
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "Cannot open file:" << path;
+        return;
+    }
+
+    QDataStream in(&file);
+    in.setVersion(QDataStream::Qt_6_0);
+
+    tasks.clear();
+
+    // 🔥 HEADER
+    char header[4];
+    in.readRawData(header, 4);
+
+    if (strncmp(header, "TSK1", 4) != 0) {
+        qDebug() << "Wrong file format!";
+        file.close();
+        return;
+    }
+
+    qint32 size;
+    in >> size;
+
+    qDebug() << "READ SIZE =" << size;
+
+    for (int i = 0; i < size; ++i) {
+
+        QString title;
+        QDate date;
+        int priority;
+        bool completed;
+
+        qint64 timeSpent;
+        bool running;
+        QDateTime start;
+
+        in >> title >> date >> priority >> completed
+            >> timeSpent >> running >> start;
+
+        Task t(title, date, priority, completed);
+
+        // 🔥 ВОССТАНОВЛЕНИЕ ТАЙМЕРА
+        if (running) {
+            qint64 extra = start.secsTo(QDateTime::currentDateTime());
+            timeSpent+= extra;
+        }
+
+        // 🔥 СЕТТЕРЫ (добавь их в Task!)
+        t.setTimeSpent(timeSpent);
+
+        tasks.append(t);
+    }
+
+    file.close();
+
+    qDebug() << "Loaded tasks:" << tasks.size();
+    qDebug() << "Loading from:" << path;
 }

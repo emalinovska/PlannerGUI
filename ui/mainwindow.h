@@ -5,6 +5,7 @@
 #include <QCloseEvent>
 #include "core/Planner.h"
 #include <QTableWidgetItem>
+#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -44,6 +45,7 @@ private:
 
     // ⭐ ЭТО ВАЖНО — ЭТОГО У ТЕБЯ НЕ ХВАТАЕТ
     QString currentUser;
+    QTimer *liveTimer;
 };
 
 #endif // MAINWINDOW_H
