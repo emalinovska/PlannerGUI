@@ -10,20 +10,14 @@ Designed to help users organize tasks, track time, and improve productivity.
 * Filter tasks by date and priority
 * Sort tasks in the table
 * Track time spent on each task (live timer)
-* 📊 Display statistics:
-** Total tasks
-** Completed tasks
-** Average priority
-** Average time spent
+* Display statistics: Total tasks, Completed tasks, Average priority, Average time spent
 * User login and registration
 * Multiple UI themes(Light, Dark, Blue, Pastel)
 
 ## Build instructions
 
 1) Open the project in Qt Creator
-2) Select:
-* Qt 6
-* MinGW 64-bit compiler
+2) Select: Qt 6 (MinGW 64-bit compiler)
 3) Build in Release mode
 
 ## Run
@@ -32,9 +26,13 @@ Run the generated `.exe` file after building.
 
 ## Project Structure
 PlannerGUI/
-│── core/          # Task & Planner logic
+
+│── core/    # Task & Planner logic
+
 │── ui/            # UI (MainWindow, dialogs)
+
 │── data/          # User data (JSON + binary)
+
 │── themes/        # UI themes (QSS)
 ## Highlights
 * Binary file storage for tasks
