@@ -111,6 +111,30 @@
         </item>
        </widget>
       </item>
+      <item>
+       <widget class="QComboBox" name="sortBox">
+        <item>
+         <property name="text">
+          <string>No sorting</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Priority</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Date</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Title</string>
+         </property>
+        </item>
+       </widget>
+      </item>
      </layout>
     </item>
     <item>

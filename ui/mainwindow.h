@@ -28,24 +28,24 @@ private slots:
     void on_deleteButton_clicked();
     void on_dateFilterBox_currentIndexChanged(int index);
     void on_priorityFilterBox_currentIndexChanged(int index);
+    void on_sortBox_currentIndexChanged(int index);
     void on_taskTable_itemChanged(QTableWidgetItem *item);
     void on_logoutButton_clicked();
-
-
-private:
-    void updateTable();
-    void updateLegend();
-    void updateSummary(const QVector<Task> &tasks);
-    void updateRowNumbers();
-    void applyTheme(const QString &themePath);
 
 private:
     Ui::MainWindow *ui;
     Planner planner;
 
-    // ⭐ ЭТО ВАЖНО — ЭТОГО У ТЕБЯ НЕ ХВАТАЕТ
+
     QString currentUser;
     QTimer *liveTimer;
+    void updateTable();
+    void updateLegend();
+    void updateSummary(const QVector<Task> &tasks);
+    void updateRowNumbers();
+    void applyTheme(const QString &themePath);
+    void saveTasks();
+
 };
 
 #endif // MAINWINDOW_H

@@ -1,51 +1,166 @@
 #include "Planner.h"
+
 #include <QFile>
 #include <QDataStream>
 #include <QDebug>
+#include <algorithm>
 #include <cstring>
 
-// ===== GET TASKS =====
+// ================= GET TASKS =================
 const QVector<Task>& Planner::getTasks() const
 {
     return tasks;
 }
 
-// ===== ADD =====
+// ================= ADD TASK =================
 void Planner::addTask(const Task &task)
 {
     tasks.append(task);
 }
 
-// ===== REMOVE =====
+// ================= REMOVE TASK =================
 void Planner::removeTask(int index)
 {
-    if (index >= 0 && index < tasks.size())
+    if (index >= 0 && index < tasks.size()) {
         tasks.removeAt(index);
+    }
 }
 
-// ===== UPDATE =====
+// ================= UPDATE TASK =================
 void Planner::updateTask(int index, const Task &task)
 {
-    if (index >= 0 && index < tasks.size())
+    if (index >= 0 && index < tasks.size()) {
         tasks[index] = task;
+    }
 }
 
-// ===== SET COMPLETED =====
-void Planner::setCompleted(int index, bool done){
-    if (index >= 0 && index < tasks.size())
+// ================= COMPLETE TASK =================
+void Planner::setCompleted(int index, bool done)
+{
+    if (index >= 0 && index < tasks.size()) {
         tasks[index].setCompleted(done);
+    }
 }
 
-void Planner::startTaskTimer(int index) {
-    if (index >= 0 && index < tasks.size())
+// ================= TIMER CONTROL =================
+void Planner::startTaskTimer(int index)
+{
+    if (index >= 0 && index < tasks.size()) {
         tasks[index].startTimer();
+    }
 }
 
-void Planner::stopTaskTimer(int index) {
-    if (index>= 0 && index < tasks.size())
+void Planner::stopTaskTimer(int index)
+{
+    if (index >= 0 && index < tasks.size()) {
         tasks[index].stopTimer();
+    }
 }
-// ================= SAVE =================
+
+// ================= SORTING =================
+
+// Sort tasks by priority (highest first)
+void Planner::sortByPriority()
+{
+    std::sort(tasks.begin(), tasks.end(),
+              [](const Task &a, const Task &b)
+              {
+                  return a.getPriority() > b.getPriority();
+              });
+}
+
+// Sort tasks by due date (nearest first)
+void Planner::sortByDate()
+{
+    std::sort(tasks.begin(), tasks.end(),
+              [](const Task &a, const Task &b)
+              {
+                  return a.getDueDate() < b.getDueDate();
+              });
+}
+void Planner::sortByTitle()
+{
+    std::sort(tasks.begin(), tasks.end(),
+              [](const Task &a, const Task &b)
+              {
+                  return a.getTitle().toLower()
+                  < b.getTitle().toLower();
+              });
+}
+
+// ================= FILTERING =================
+
+// Filter tasks by minimum priority
+QVector<Task> Planner::filterByPriority(int minPriority) const
+{
+    QVector<Task> result;
+
+    for (const Task &t : tasks) {
+        if (t.getPriority() >= minPriority)
+            result.append(t);
+    }
+
+    return result;
+}
+
+// Filter tasks by completion status
+QVector<Task> Planner::filterByCompleted(bool completed) const
+{
+    QVector<Task> result;
+
+    for (const Task &t : tasks) {
+        if (t.isCompleted() == completed)
+            result.append(t);
+    }
+
+    return result;
+}
+
+// Filter tasks by due date
+QVector<Task> Planner::filterByDueDate(const QDate &date) const
+{
+    QVector<Task> result;
+
+    for (const Task &t : tasks) {
+        if (t.getDueDate() == date)
+            result.append(t);
+    }
+
+    return result;
+}
+
+// ================= SUMMARY =================
+
+// Calculate average priority
+double Planner::averagePriority() const
+{
+    if (tasks.isEmpty())
+        return 0;
+
+    int sum = 0;
+
+    for (const Task &t : tasks) {
+        sum += t.getPriority();
+    }
+
+    return static_cast<double>(sum) / tasks.size();
+}
+
+// Calculate average time spent
+qint64 Planner::averageTimeSpent() const
+{
+    if (tasks.isEmpty())
+        return 0;
+
+    qint64 total = 0;
+
+    for (const Task &t : tasks) {
+        total += t.getCurrentTimeSpent();
+    }
+
+    return total / tasks.size();
+}
+// ================= SAVE TO BINARY FILE =================
 void Planner::saveToBinaryFile(const QString &path)
 {
     QFile file(path);
@@ -58,13 +173,14 @@ void Planner::saveToBinaryFile(const QString &path)
     QDataStream out(&file);
     out.setVersion(QDataStream::Qt_6_0);
 
-    // 🔥 HEADER
+    // File header
     out.writeRawData("TSK1", 4);
 
     qint32 size = tasks.size();
     out << size;
 
     for (const Task &t : tasks) {
+
         out << t.getTitle()
         << t.getDueDate()
         << t.getPriority()
@@ -78,10 +194,9 @@ void Planner::saveToBinaryFile(const QString &path)
 
     qDebug() << "Saved tasks:" << size;
     qDebug() << "Saving to:" << path;
-    qDebug() << "File size:" << QFile(path).size();
 }
 
-// ================= LOAD =================
+// ================= LOAD FROM BINARY FILE =================
 void Planner::loadFromBinaryFile(const QString &path)
 {
     QFile file(path);
@@ -101,12 +216,12 @@ void Planner::loadFromBinaryFile(const QString &path)
 
     tasks.clear();
 
-    // 🔥 HEADER
+    // Read header
     char header[4];
     in.readRawData(header, 4);
 
     if (strncmp(header, "TSK1", 4) != 0) {
-        qDebug() << "Wrong file format!";
+        qDebug() << "Invalid binary file!";
         file.close();
         return;
     }
@@ -114,34 +229,41 @@ void Planner::loadFromBinaryFile(const QString &path)
     qint32 size;
     in >> size;
 
-    qDebug() << "READ SIZE =" << size;
+    qDebug() << "Tasks to load:" << size;
 
     for (int i = 0; i < size; ++i) {
 
         QString title;
-        QDate date;
+        QDate dueDate;
         int priority;
         bool completed;
 
         qint64 timeSpent;
         bool running;
-        QDateTime start;
+        QDateTime startTime;
 
-        in >> title >> date >> priority >> completed
-            >> timeSpent >> running >> start;
+        in >> title
+            >> dueDate
+            >> priority
+            >> completed
+            >> timeSpent
+            >> running
+            >> startTime;
 
-        Task t(title, date, priority, completed);
+        Task task(title, dueDate, priority, completed);
 
-        // 🔥 ВОССТАНОВЛЕНИЕ ТАЙМЕРА
+        // Restore timer progress
         if (running) {
-            qint64 extra = start.secsTo(QDateTime::currentDateTime());
-            timeSpent+= extra;
+
+            qint64 extraSeconds =
+                startTime.secsTo(QDateTime::currentDateTime());
+
+            timeSpent += extraSeconds;
         }
 
-        // 🔥 СЕТТЕРЫ (добавь их в Task!)
-        t.setTimeSpent(timeSpent);
+        task.setTimeSpent(timeSpent);
 
-        tasks.append(t);
+        tasks.append(task);
     }
 
     file.close();
